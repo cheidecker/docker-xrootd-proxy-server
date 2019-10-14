@@ -1,0 +1,114 @@
+# Definition of variables
+# #
+set METAMANAGER = <metamanager.com>
+
+set MANAGER = <hostname.com>
+
+set XRDADMINPATH = /opt/xrootd/tmp/manager
+
+# Set pid and tmp files to above defined path
+#
+all.pidpath ${XRDADMINPATH}
+all.adminpath ${XRDADMINPATH}
+
+# Tell everyone who the manager is
+#
+
+all.manager ${MANAGER}:1213
+
+# Use dynamic ports
+#
+xrd.port any
+
+# The redirector and all cmsd’s export /data red-only with the stage option. The stage
+# option requests that if the file isn’t found in the cluster the redirector should send
+# the client to a PFC server with enough space to cache the file.
+#
+#all.export / stage r/o
+
+## BEGIN REDIRECTOR
+#
+## Configuration is different for the redirector, the server cmsd, and
+## for the server xrootd. We break those out in the if-else-fi clauses.
+##
+##if ${redirector}
+#all.role manager
+#
+## Export with stage option - if the file isn’t found in the cluster the
+## redirector sends the client to a PFC server with enough free space.
+##
+#all.export / stage r/o
+#
+## Use static port
+##
+#xrd.port 1094
+#
+## ENDE REDIRECTOR
+
+# BEGIN SERVER
+
+# Server’s cmsd configuration – all PFC’s are virtual data servers
+#
+#else if exec cmsd
+if exec cmsd
+
+all.role server
+
+# Export with stage option - this tells manager cmsd we can pull files from the origin
+#
+all.export / stage r/o
+
+# The cmsd uses the standard oss plug-in to locate files in the cache.
+# oss.localroot directive should be the same as for the server.
+#
+oss.localroot /opt/cache
+
+# Server’s xrootd configuration – all PFC’s are virtual data servers
+#
+else
+
+all.role server
+
+# For xrootd, load the proxy plugin and the disk caching plugin.
+#
+ofs.osslib /usr/lib64/libXrdPss-4.so
+
+pss.cachelib /usr/lib64/libXrdFileCache-4.so
+
+# The server needs to write to disk, stage not relevant
+#
+all.export / rw
+
+# Tell the proxy where the data is coming from (arbitrary).
+#
+pss.origin =
+#pss.origin someserver.domain.org:1094
+
+# Tell the PFC’s where the disk cache resides (arbitrary).
+#
+oss.localroot /opt/cache
+
+# Tell the PFC’s available RAM
+#
+pfc.ram 1g
+
+# Tell the PFC's avaiable disk usage
+#
+pfc.diskusage 0.9 0.95
+
+# Adopt blocksize to about 100 times the block size of the filesystem (16m maximum allowed)
+pfc.blocksize 16m
+
+# enable monitoring stream (detailed and summary UDP stream
+xrootd.monitor all auth flush 10s\
+               fstat 1s lfn ops xfr 1\
+               ident 1m\
+               window 1s\
+               dest fstat user redir <metamanager.com>:9932
+
+xrd.report <metamanager.com>:9931 every 10 all
+
+fi
+
+# ENDE SERVER
+

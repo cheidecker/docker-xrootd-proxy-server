@@ -1,0 +1,109 @@
+# Definition of variables
+# #
+set METAMANAGER = <metamanager.com>
+
+set MANAGER = <hostname.com>
+
+set XRDADMINPATH = /opt/xrootd/tmp/manager
+
+# Set pid and tmp files to above defined path
+#
+all.pidpath ${XRDADMINPATH}
+all.adminpath ${XRDADMINPATH}
+
+# Tell everyone who the manager is
+#
+all.manager ${MANAGER}:1213
+all.manager meta ${METAMANAGER}:1213
+
+# Use dynamic ports
+#
+xrd.port any
+
+# The redirector and all cmsd’s export /data red-only with the stage option. The stage
+# option requests that if the file isn’t found in the cluster the redirector should send
+# the client to a PFC server with enough space to cache the file.
+#
+all.export / stage r/o
+
+# BEGIN REDIRECTOR
+
+# Configuration is different for the redirector, the server cmsd, and
+# for the server xrootd. We break those out in the if-else-fi clauses.
+#
+#if ${redirector}
+all.role manager
+
+# Export with stage option - if the file isn’t found in the cluster the
+# redirector sends the client to a PFC server with enough free space.
+#
+all.export / stage r/o
+
+# Use static port
+#
+xrd.port 1094
+
+# Load RedirPlugin for usage of local paths
+#ofs.cmslib /opt/RedirPlugin/src/libRedirPlugin.so
+#redirplugin.localroot file:/storage/sg/xrootd/cache
+# Optional:
+#redirplugin.readonlyredirect True
+#redirplugin.debug True
+
+# ENDE REDIRECTOR
+
+## BEGIN SERVER
+#
+## Server’s cmsd configuration – all PFC’s are virtual data servers
+##
+##else if exec cmsd
+#if exec cmsd
+#
+#all.role server
+#
+## Export with stage option - this tells manager cmsd we can pull files from the origin
+##
+#all.export / stage r/o
+#
+## The cmsd uses the standard oss plug-in to locate files in the cache.
+## oss.localroot directive should be the same as for the server.
+##
+#oss.localroot ${cachedir}
+#
+#
+## Server’s xrootd configuration – all PFC’s are virtual data servers
+##
+#else
+#
+#all.role server
+#
+## For xrootd, load the proxy plugin and the disk caching plugin.
+##
+#ofs.osslib   /xrootd/xrootd/lib64/libXrdPss.so
+#pss.cachelib /xrootd/xrootd/lib64/libXrdFileCache-4.so
+#
+## The server needs to write to disk, stage not relevant
+##
+#all.export / rw
+#
+## Tell the proxy where the data is coming from (arbitrary).
+##
+#pss.origin =
+##pss.origin someserver.domain.org:1094
+#
+## Tell the PFC’s where the disk cache resides (arbitrary).
+##
+#oss.localroot ${cachedir}
+#
+## Tell the PFC’s available RAM
+##
+#pfc.ram 8g
+#
+## Tell the PFC's avaiable disk usage
+##
+#pfc.diskusage 0.45 0.50
+#
+#
+##fi
+#
+## ENDE SERVER
