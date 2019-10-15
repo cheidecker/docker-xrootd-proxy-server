@@ -1,2 +1,6 @@
 *.pem
 *.p12
+*.sif
+*.simg
+*.tar
+*.path
